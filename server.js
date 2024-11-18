@@ -2,7 +2,8 @@ require('dotenv').config();
 
 const express = require('express')
 const axios = require('axios')
-const redis = require('redis')
+const redis = require('redis');
+const rateLimit = require('express-rate-limit');
 
 const app = express()
 
@@ -14,6 +15,14 @@ const redisClient = redis.createClient({
   }
 })
 
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many requests from this IP, please try again after 15 minutes',
+  standardHeaders: true,
+  legacyHeaders: false
+})
+
 redisClient.on('connect', () => {
   console.log('Connected a Redis')
 })
@@ -21,6 +30,8 @@ redisClient.on('connect', () => {
 redisClient.on('error', (err) => {
   console.error('Error en Redis:', err)
 })
+
+app.use(limiter)
 
 app.get('/weather/:city', async (req, res) => {
   const city = req.params.city.toLowerCase()
